@@ -1,12 +1,16 @@
-import { View, Text } from "react-native";
+import { icons } from "@/constants/icons";
 import React from "react";
+import { Image, Text, View } from "react-native";
 
-const saved = () => {
+const Saved = () => {
   return (
-    <View>
-      <Text>saved</Text>
+    <View className="bg-primary flex-1 px-10">
+      <View className="flex justify-center items-center flex-1 flex-col gap-5">
+        <Image source={icons.save} className="size-10" tintColor="#fff" />
+        <Text className="text-grey-500 text-base">Saved</Text>
+      </View>
     </View>
   );
 };
 
-export default saved;
+export default Saved;
