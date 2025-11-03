@@ -53,6 +53,7 @@ const MovieDetails = () => {
   const [selectedTrailer, setSelectedTrailer] = useState<any>(null);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [showAllTrailers, setShowAllTrailers] = useState(false);
+  const [showAllBehindScenes, setShowAllBehindScenes] = useState(false);
 
   // Fetch movie details
   const { data: movie, loading: movieLoading } = useFetch(() =>
@@ -218,8 +219,6 @@ const MovieDetails = () => {
             </Text>
           </View>
           {/* Video Status & Additional Trailers */}
-
-          {/* -----------------------------------*/}
           {!videosLoading && trailers.length > 0 && (
             <View className="mt-6 w-full">
               <Text className="text-white font-bold text-lg mb-3">
@@ -297,7 +296,11 @@ const MovieDetails = () => {
               <Text className="text-white font-bold text-lg mb-3">
                 Behind the Scenes ({behindTheScenes.length})
               </Text>
-              {behindTheScenes.slice(0, 2).map((video) => (
+
+              {(showAllBehindScenes
+                ? behindTheScenes
+                : behindTheScenes.slice(0, 2)
+              ).map((video) => (
                 <TouchableOpacity
                   key={video.id}
                   className="flex-row items-center bg-dark-200 rounded-lg p-3 mb-2"
@@ -320,8 +323,31 @@ const MovieDetails = () => {
                   </View>
                 </TouchableOpacity>
               ))}
+
+              {behindTheScenes.length > 2 && !showAllBehindScenes && (
+                <TouchableOpacity
+                  onPress={() => setShowAllBehindScenes(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-accent text-sm text-center mt-2 font-semibold">
+                    +{behindTheScenes.length - 2} more behind the scenes
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {showAllBehindScenes && (
+                <TouchableOpacity
+                  onPress={() => setShowAllBehindScenes(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-light-200 text-sm text-center mt-2">
+                    Show less
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
+
           {/* Movie Details */}
           <MovieInfo label="Overview" value={movie?.overview} />
           <MovieInfo
@@ -346,13 +372,15 @@ const MovieDetails = () => {
               }
             />
           </View>
-          <MovieInfo
-            label="Production Companies"
-            value={
-              movie?.production_companies?.map((c) => c.name).join(" • ") ||
-              "N/A"
-            }
-          />
+          <View className="mb-10">
+            <MovieInfo
+              label="Production Companies"
+              value={
+                movie?.production_companies?.map((c) => c.name).join(" • ") ||
+                "N/A"
+              }
+            />
+          </View>
         </View>
       </ScrollView>
 
