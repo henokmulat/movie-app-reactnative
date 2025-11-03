@@ -1,4 +1,4 @@
-import { Client, Databases, Query } from "react-native-appwrite";
+import { Account, Client, Databases, Query } from "react-native-appwrite";
 
 // track the searches made by the user
 
@@ -10,6 +10,8 @@ const client = new Client()
   .setProject(process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID!);
 
 const databases = new Databases(client);
+export const account = new Account(client);
+
 export const getTrendingMovies = async (): Promise<
   TrendingMovie[] | undefined
 > => {
