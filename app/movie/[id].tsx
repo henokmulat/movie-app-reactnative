@@ -52,6 +52,7 @@ const MovieDetails = () => {
   const [videoError, setVideoError] = useState<string | null>(null);
   const [selectedTrailer, setSelectedTrailer] = useState<any>(null);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
+  const [showAllTrailers, setShowAllTrailers] = useState(false);
 
   // Fetch movie details
   const { data: movie, loading: movieLoading } = useFetch(() =>
@@ -201,14 +202,12 @@ const MovieDetails = () => {
         {/* Movie Info */}
         <View className="flex-col items-start justify-center mt-5 px-5">
           <Text className="text-white font-bold text-2xl">{movie?.title}</Text>
-
           <View className="flex-row items-center gap-3 mt-2">
             <Text className="text-light-200 text-base">
               {movie?.release_date?.split("-")[0]}
             </Text>
             <Text className="text-light-200 text-base">{movie?.runtime}m</Text>
           </View>
-
           <View className="flex-row items-center bg-dark-100 px-3 py-2 rounded-md gap-2 mt-3">
             <Image source={icons.star} className="w-5 h-5" />
             <Text className="text-white font-bold text-base">
@@ -218,49 +217,77 @@ const MovieDetails = () => {
               ({movie?.vote_count} votes)
             </Text>
           </View>
-
           {/* Video Status & Additional Trailers */}
+
+          {/* -----------------------------------*/}
           {!videosLoading && trailers.length > 0 && (
             <View className="mt-6 w-full">
               <Text className="text-white font-bold text-lg mb-3">
                 Available Trailers ({trailers.length})
               </Text>
 
-              {/* Additional trailers list */}
-              {trailers.slice(0, 3).map((trailer, index) => (
-                <TouchableOpacity
-                  key={trailer.id}
-                  className="flex-row items-center bg-dark-200 rounded-lg p-3 mb-2"
-                  onPress={() => playTrailer(trailer)}
-                >
-                  <View className="bg-accent rounded-full p-2 mr-3">
-                    <Image
-                      source={icons.play}
-                      className="w-4 h-4 ml-0.5"
-                      tintColor="#fff"
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-white font-medium text-sm">
-                      {trailer.name}
-                    </Text>
-                    <Text className="text-light-200 text-xs mt-1">
-                      {trailer.type} • {trailer.size}p
-                    </Text>
-                  </View>
-                  {index === 0 && (
-                    <View className="bg-green-500 px-2 py-1 rounded">
-                      <Text className="text-white text-xs font-bold">MAIN</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
+              {(() => {
+                const displayedTrailers = showAllTrailers
+                  ? trailers
+                  : trailers.slice(0, 3);
 
-              {trailers.length > 3 && (
-                <Text className="text-light-200 text-sm text-center mt-2">
-                  +{trailers.length - 3} more trailers available
-                </Text>
-              )}
+                return (
+                  <>
+                    {displayedTrailers.map((trailer, index) => (
+                      <TouchableOpacity
+                        key={trailer.id}
+                        className="flex-row items-center bg-dark-200 rounded-lg p-3 mb-2"
+                        onPress={() => playTrailer(trailer)}
+                      >
+                        <View className="bg-accent rounded-full p-2 mr-3">
+                          <Image
+                            source={icons.play}
+                            className="w-4 h-4 ml-0.5"
+                            tintColor="#fff"
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-white font-medium text-sm">
+                            {trailer.name}
+                          </Text>
+                          <Text className="text-light-200 text-xs mt-1">
+                            {trailer.type} • {trailer.size}p
+                          </Text>
+                        </View>
+                        {index === 0 && (
+                          <View className="bg-green-500 px-2 py-1 rounded">
+                            <Text className="text-white text-xs font-bold">
+                              MAIN
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+
+                    {trailers.length > 3 && !showAllTrailers && (
+                      <TouchableOpacity
+                        onPress={() => setShowAllTrailers(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Text className="text-accent text-sm text-center mt-2 font-semibold">
+                          +{trailers.length - 3} more trailers available
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {showAllTrailers && (
+                      <TouchableOpacity
+                        onPress={() => setShowAllTrailers(false)}
+                        activeOpacity={0.7}
+                      >
+                        <Text className="text-light-200 text-sm text-center mt-2">
+                          Show less
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                );
+              })()}
             </View>
           )}
 
@@ -295,15 +322,12 @@ const MovieDetails = () => {
               ))}
             </View>
           )}
-
           {/* Movie Details */}
           <MovieInfo label="Overview" value={movie?.overview} />
-
           <MovieInfo
             label="Genres"
             value={movie?.genres?.map((g) => g.name).join(" • ") || "N/A"}
           />
-
           <View className="flex-row justify-between w-full">
             <MovieInfo
               label="Budget"
@@ -322,7 +346,6 @@ const MovieDetails = () => {
               }
             />
           </View>
-
           <MovieInfo
             label="Production Companies"
             value={
