@@ -30,6 +30,7 @@ const _Layout = () => {
     <Tabs
       screenOptions={{
         tabBarShowLabel: false,
+        headerShown: false,
         tabBarItemStyle: {
           width: "100%",
           height: "100%",
@@ -53,7 +54,6 @@ const _Layout = () => {
         name="index"
         options={{
           title: "Home",
-          headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} title="Home" icon={icons.home} />
           ),
@@ -63,7 +63,6 @@ const _Layout = () => {
         name="search"
         options={{
           title: "Search",
-          headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} title="Search" icon={icons.search} />
           ),
@@ -73,7 +72,6 @@ const _Layout = () => {
         name="saved"
         options={{
           title: "Saved",
-          headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} title="Saved" icon={icons.save} />
           ),
@@ -83,7 +81,6 @@ const _Layout = () => {
         name="profile"
         options={{
           title: "Profile",
-          headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} title="Profile" icon={icons.person} />
           ),
