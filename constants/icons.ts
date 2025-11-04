@@ -1,5 +1,7 @@
 import arrow from "@/assets/icons/arrow.png";
 import close from "@/assets/icons/close.png";
+import heartFilled from "@/assets/icons/heart-filled.png";
+import heart from "@/assets/icons/heart.png";
 import home from "@/assets/icons/home.png";
 import logo from "@/assets/icons/logo.png";
 import pause from "@/assets/icons/pause.png";
@@ -20,6 +22,8 @@ export const icons = {
   play,
   pause,
   arrow,
+  heart,
+  heartFilled,
   video,
   close,
 };
