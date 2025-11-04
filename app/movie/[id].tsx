@@ -4,20 +4,16 @@ import {
   fetchMovieCast,
   fetchMovieDetails,
   fetchMovieReviews,
-  fetchMovieVideos,
-  getBehindTheScenes,
-  getPrimaryTrailer,
-  getTrailers,
-  getVideoStats,
 } from "@/services/api";
 import { addFavorite, isFavorite, removeFavorite } from "@/services/favorites";
-
 import useFetch from "@/services/useFetch";
+import { useMovieVideos } from "@/services/useMovieVideos";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
+  FlatList,
   Image,
   Modal,
   ScrollView,
@@ -25,10 +21,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const { width: screenWidth } = Dimensions.get("window");
+
 interface MovieInfoProps {
   label: string;
   value?: string | number | null;
@@ -43,131 +39,96 @@ const MovieInfo = ({ label, value }: MovieInfoProps) => (
   </View>
 );
 
-const { width: screenWidth } = Dimensions.get("window");
-
 const MovieDetails = () => {
   const { id } = useLocalSearchParams();
   const movieId = id as string;
-
-  // State for videos and trailer modal
-  const [videos, setVideos] = useState<any[]>([]);
-  const [videosLoading, setVideosLoading] = useState(true);
-  const [videoError, setVideoError] = useState<string | null>(null);
-  const [selectedTrailer, setSelectedTrailer] = useState<any>(null);
-  const [showTrailerModal, setShowTrailerModal] = useState(false);
-  const [showAllTrailers, setShowAllTrailers] = useState(false);
-  const [showAllBehindScenes, setShowAllBehindScenes] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const [favorite, setFavorite] = useState(false);
-
   const [cast, setCast] = useState<any[]>([]);
   const [castLoading, setCastLoading] = useState(true);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [showAllReviews, setShowAllReviews] = useState(false);
 
-  useEffect(() => {
-    const checkFav = async () => {
-      const fav = await isFavorite(movieId);
-      setFavorite(fav);
-    };
-    checkFav();
-  }, []);
+  const {
+    trailers,
+    behindTheScenes,
+    videosLoading,
+    selectedTrailer,
+    setSelectedTrailer,
+    showTrailerModal,
+    setShowTrailerModal,
+    showAllTrailers,
+    setShowAllTrailers,
+    showAllBehindScenes,
+    setShowAllBehindScenes,
+    primaryTrailer,
+  } = useMovieVideos(movieId);
 
   // Fetch movie details
   const { data: movie, loading: movieLoading } = useFetch(() =>
     fetchMovieDetails(movieId)
   );
-  const toggleFavorite = async () => {
-    if (movieLoading || !movie) {
-      return;
-    }
+
+  // Favorite status
+  useEffect(() => {
+    (async () => {
+      setFavorite(await isFavorite(movieId));
+    })();
+  }, [movieId]);
+
+  const toggleFavorite = useCallback(async () => {
+    if (!movie) return;
     if (favorite) {
       await removeFavorite(movieId);
       setFavorite(false);
     } else {
-      await addFavorite(movie!);
+      await addFavorite(movie);
       setFavorite(true);
     }
-  };
-  const insets = useSafeAreaInsets();
-  // Fetch videos when component mounts
+  }, [favorite, movie, movieId]);
+
+  // Load cast
   useEffect(() => {
-    const loadVideos = async () => {
-      if (!movieId) return;
-
-      try {
-        setVideosLoading(true);
-        setVideoError(null);
-        const movieVideos = await fetchMovieVideos(movieId);
-        setVideos(movieVideos);
-
-        // Log video stats
-        const trailers = getTrailers(movieVideos);
-        const behindTheScenes = getBehindTheScenes(movieVideos);
-        const stats = getVideoStats(movieVideos);
-
-        console.log(
-          `Found ${trailers.length} trailers and ${behindTheScenes.length} behind-the-scenes videos`
-        );
-      } catch (error) {
-        console.error("Error loading videos:", error);
-        setVideoError("Failed to load videos");
-      } finally {
-        setVideosLoading(false);
-      }
-    };
-
-    loadVideos();
-  }, [movieId]);
-
-  // Get filtered videos
-  const trailers = getTrailers(videos);
-  const behindTheScenes = getBehindTheScenes(videos);
-  const primaryTrailer = getPrimaryTrailer(videos);
-  const stats = getVideoStats(videos);
-
-  useEffect(() => {
-    const loadCast = async () => {
+    (async () => {
       try {
         const credits = await fetchMovieCast(movieId);
         setCast(credits || []);
       } catch (err) {
-        console.error("Error loading cast:", err);
+        console.error(err);
       } finally {
         setCastLoading(false);
       }
-    };
-    loadCast();
+    })();
   }, [movieId]);
 
+  // Load reviews
   useEffect(() => {
-    const loadReviews = async () => {
+    (async () => {
       try {
-        setReviewsLoading(true);
         const data = await fetchMovieReviews(movieId);
-        console.log("reviews-------------,", data);
-
         setReviews(data);
-      } catch (error) {
-        console.error("Error loading reviews:", error);
+      } catch (err) {
+        console.error(err);
       } finally {
         setReviewsLoading(false);
       }
-    };
-    loadReviews();
+    })();
   }, [movieId]);
 
-  // Play trailer function
-  const playTrailer = (trailer?: any) => {
-    const trailerToPlay = trailer || primaryTrailer;
-    if (trailerToPlay) {
-      setSelectedTrailer(trailerToPlay);
-      setShowTrailerModal(true);
-    }
-  };
+  // Play trailer
+  const playTrailer = useCallback(
+    (trailer?: any) => {
+      const trailerToPlay = trailer || primaryTrailer;
+      if (trailerToPlay) {
+        setSelectedTrailer(trailerToPlay);
+        setShowTrailerModal(true);
+      }
+    },
+    [primaryTrailer, setSelectedTrailer, setShowTrailerModal]
+  );
 
-  // Close trailer modal
   const closeTrailerModal = () => {
     setShowTrailerModal(false);
     setSelectedTrailer(null);
@@ -211,7 +172,9 @@ const MovieDetails = () => {
   if (!movie) {
     return (
       <View className="bg-primary flex-1 justify-center items-center">
-        <Text className="text-white text-lg">Movie not found</Text>
+        <Text className="text-white text-lg">
+          Movie not found.Check your Internet Connection!
+        </Text>
         <TouchableOpacity
           className="bg-accent rounded-lg py-3 px-6 mt-4"
           onPress={router.back}
@@ -221,6 +184,45 @@ const MovieDetails = () => {
       </View>
     );
   }
+  const CARD_WIDTH = screenWidth * 0.7; // 70% of screen width
+  const CARD_HEIGHT = 200;
+
+  const renderTrailerItem = ({ item, index }: { item: any; index: number }) => (
+    <TouchableOpacity
+      key={item.id}
+      className="mr-4 "
+      activeOpacity={0.8}
+      onPress={() => playTrailer(item)}
+      style={{ width: CARD_WIDTH }}
+    >
+      <View className="relative">
+        <Image
+          source={{
+            uri: `https://img.youtube.com/vi/${item.key}/hqdefault.jpg`,
+          }}
+          className="rounded-lg"
+          resizeMode="cover"
+          style={{ width: "100%", height: CARD_HEIGHT }}
+        />
+        <View className="absolute inset-0 items-center justify-center bg-black/40 rounded-lg">
+          <Image source={icons.play} className="w-10 h-10" tintColor="#fff" />
+        </View>
+        {index === 0 && (
+          <View className="absolute top-2 left-2 bg-green-500 px-2 py-1 rounded">
+            <Text className="text-white text-xs font-bold">MAIN</Text>
+          </View>
+        )}
+      </View>
+      <View className="mt-2">
+        <Text numberOfLines={1} className="text-white font-medium text-sm">
+          {item.name}
+        </Text>
+        <Text className="text-light-200 text-xs mt-1">
+          {item.type} • {item.size}p
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View className="bg-primary flex-1">
@@ -229,11 +231,11 @@ const MovieDetails = () => {
         contentContainerClassName="pb-20"
         showsVerticalScrollIndicator={false}
       >
-        {/* Movie Poster with Play Button */}
+        {/* Movie Poster */}
         <View className="relative">
           <Image
             source={{
-              uri: `https://image.tmdb.org/t/p/w500${movie?.poster_path}`,
+              uri: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
             }}
             className="w-full h-[550px]"
             resizeMode="cover"
@@ -250,8 +252,8 @@ const MovieDetails = () => {
             />
           </TouchableOpacity>
 
-          {/* Play Trailer Button Overlay */}
-          {primaryTrailer && !videosLoading && (
+          {/* Play Trailer Overlay */}
+          {/* {primaryTrailer && !videosLoading && (
             <TouchableOpacity
               className="absolute inset-0 justify-center items-center"
               onPress={() => playTrailer()}
@@ -270,9 +272,8 @@ const MovieDetails = () => {
                 Play Trailer
               </Text>
             </TouchableOpacity>
-          )}
+          )} */}
 
-          {/* Loading State for Videos */}
           {videosLoading && (
             <View className="absolute inset-0 justify-center items-center bg-black/30">
               <ActivityIndicator size="large" color="#fff" />
@@ -282,7 +283,6 @@ const MovieDetails = () => {
             </View>
           )}
 
-          {/* No Trailer Available */}
           {!primaryTrailer && !videosLoading && (
             <View className="absolute inset-0 justify-center items-center bg-black/30">
               <View className="bg-dark-100 rounded-full p-5 opacity-80">
@@ -301,105 +301,72 @@ const MovieDetails = () => {
 
         {/* Movie Info */}
         <View className="flex-col items-start justify-center mt-5 px-5">
-          <Text className="text-white font-bold text-2xl">{movie?.title}</Text>
+          <Text className="text-white font-bold text-2xl">{movie.title}</Text>
           <View className="flex-row items-center gap-3 mt-2">
             <Text className="text-light-200 text-base">
-              {movie?.release_date?.split("-")[0]}
+              {movie.release_date?.split("-")[0]}
             </Text>
-            <Text className="text-light-200 text-base">{movie?.runtime}m</Text>
+            <Text className="text-light-200 text-base">{movie.runtime}m</Text>
           </View>
           <View className="flex-row items-center bg-dark-100 px-3 py-2 rounded-md gap-2 mt-3">
             <Image source={icons.star} className="w-5 h-5" />
             <Text className="text-white font-bold text-base">
-              {Math.round(movie?.vote_average ?? 0)}/10
+              {Math.round(movie.vote_average ?? 0)}/10
             </Text>
             <Text className="text-light-200 text-base">
-              ({movie?.vote_count} votes)
+              ({movie.vote_count} votes)
             </Text>
           </View>
-          {/* Video Status & Additional Trailers */}
+
+          {/* Trailers Section */}
           {!videosLoading && trailers.length > 0 && (
             <View className="mt-6 w-full">
-              <Text className="text-white font-bold text-lg mb-3">
-                Available Trailers ({trailers.length})
-              </Text>
-
-              {(() => {
-                const displayedTrailers = showAllTrailers
-                  ? trailers
-                  : trailers.slice(0, 3);
-
-                return (
-                  <>
-                    {displayedTrailers.map((trailer, index) => (
-                      <TouchableOpacity
-                        key={trailer.id}
-                        className="flex-row items-center bg-dark-200 rounded-lg p-3 mb-2"
-                        onPress={() => playTrailer(trailer)}
-                      >
-                        <View className="bg-accent rounded-full p-2 mr-3">
-                          <Image
-                            source={icons.play}
-                            className="w-4 h-4 ml-0.5"
-                            tintColor="#fff"
-                          />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-white font-medium text-sm">
-                            {trailer.name}
-                          </Text>
-                          <Text className="text-light-200 text-xs mt-1">
-                            {trailer.type} • {trailer.size}p
-                          </Text>
-                        </View>
-                        {index === 0 && (
-                          <View className="bg-green-500 px-2 py-1 rounded">
-                            <Text className="text-white text-xs font-bold">
-                              MAIN
-                            </Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    ))}
-
-                    {trailers.length > 3 && !showAllTrailers && (
-                      <TouchableOpacity
-                        onPress={() => setShowAllTrailers(true)}
-                        activeOpacity={0.7}
-                      >
-                        <Text className="text-accent text-sm text-center mt-2 font-semibold">
-                          +{trailers.length - 3} more trailers available
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {showAllTrailers && (
-                      <TouchableOpacity
-                        onPress={() => setShowAllTrailers(false)}
-                        activeOpacity={0.7}
-                      >
-                        <Text className="text-light-200 text-sm text-center mt-2">
-                          Show less
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                );
-              })()}
+              <View className="flex-row justify-between items-center mb-3">
+                <Text className="text-white font-bold text-lg">
+                  Available Trailers ({trailers.length})
+                </Text>
+                {trailers.length > 3 && (
+                  <TouchableOpacity
+                    onPress={() => router.push(`/all-trailers?id=${movieId}`)}
+                  >
+                    <Text className="text-accent font-semibold text-sm">
+                      See All
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <FlatList
+                data={showAllTrailers ? trailers : trailers.slice(0, 3)}
+                horizontal
+                keyExtractor={(item) => item.id.toString()}
+                showsHorizontalScrollIndicator={false}
+                renderItem={renderTrailerItem}
+              />
+              {trailers.length > 3 && (
+                <TouchableOpacity
+                  onPress={() => setShowAllTrailers((prev) => !prev)}
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-accent text-sm text-center mt-2 font-semibold">
+                    {showAllTrailers
+                      ? "Show less"
+                      : `+${trailers.length - 3} more trailers available`}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
-          {/* Behind the Scenes Section */}
+          {/* Behind the Scenes */}
           {!videosLoading && behindTheScenes.length > 0 && (
             <View className="mt-6 w-full">
               <Text className="text-white font-bold text-lg mb-3">
                 Behind the Scenes ({behindTheScenes.length})
               </Text>
-
               {(showAllBehindScenes
                 ? behindTheScenes
                 : behindTheScenes.slice(0, 2)
-              ).map((video) => (
+              ).map((video: any) => (
                 <TouchableOpacity
                   key={video.id}
                   className="flex-row items-center bg-dark-200 rounded-lg p-3 mb-2"
@@ -422,25 +389,15 @@ const MovieDetails = () => {
                   </View>
                 </TouchableOpacity>
               ))}
-
-              {behindTheScenes.length > 2 && !showAllBehindScenes && (
+              {behindTheScenes.length > 2 && (
                 <TouchableOpacity
-                  onPress={() => setShowAllBehindScenes(true)}
+                  onPress={() => setShowAllBehindScenes((prev) => !prev)}
                   activeOpacity={0.7}
                 >
                   <Text className="text-accent text-sm text-center mt-2 font-semibold">
-                    +{behindTheScenes.length - 2} more behind the scenes
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {showAllBehindScenes && (
-                <TouchableOpacity
-                  onPress={() => setShowAllBehindScenes(false)}
-                  activeOpacity={0.7}
-                >
-                  <Text className="text-light-200 text-sm text-center mt-2">
-                    Show less
+                    {showAllBehindScenes
+                      ? "Show less"
+                      : `+${behindTheScenes.length - 2} more behind the scenes`}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -448,12 +405,13 @@ const MovieDetails = () => {
           )}
 
           {/* Movie Details */}
-          <MovieInfo label="Overview" value={movie?.overview} />
+          <MovieInfo label="Overview" value={movie.overview} />
           <MovieInfo
             label="Genres"
-            value={movie?.genres?.map((g) => g.name).join(" • ") || "N/A"}
+            value={movie.genres?.map((g) => g.name).join(" • ") || "N/A"}
           />
-          {/*Casts section */}
+
+          {/* Cast */}
           {!castLoading && cast.length > 0 && (
             <View className="mt-8 w-full">
               <Text className="text-white font-bold text-lg mb-4">Cast</Text>
@@ -469,7 +427,7 @@ const MovieDetails = () => {
                       className="w-20 h-20 rounded-full border-2 border-accent"
                     />
                     <Text
-                      className="text-white  text-center mt-2 text-xs font-semibold"
+                      className="text-white text-center mt-2 text-xs font-semibold"
                       numberOfLines={1}
                     >
                       {actor.original_name}
@@ -485,13 +443,13 @@ const MovieDetails = () => {
               </ScrollView>
             </View>
           )}
-          {/* Movie Reviews */}
+
+          {/* Reviews */}
           {!reviewsLoading && reviews.length > 0 && (
             <View className="mt-6 w-full">
               <Text className="text-white font-bold text-lg mb-3">
                 Reviews ({reviews.length})
               </Text>
-
               {(showAllReviews ? reviews : reviews.slice(0, 3)).map(
                 (review) => (
                   <View
@@ -526,7 +484,6 @@ const MovieDetails = () => {
                         </Text>
                       </View>
                     </View>
-
                     <Text className="text-light-100 text-sm leading-5">
                       {review.content.length > 250
                         ? review.content.slice(0, 250) + "..."
@@ -535,36 +492,25 @@ const MovieDetails = () => {
                   </View>
                 )
               )}
-
-              {reviews.length > 3 && !showAllReviews && (
+              {reviews.length > 3 && (
                 <TouchableOpacity
-                  onPress={() => setShowAllReviews(true)}
+                  onPress={() => setShowAllReviews((prev) => !prev)}
                   activeOpacity={0.7}
                 >
                   <Text className="text-accent text-sm text-center mt-2 font-semibold">
-                    See all reviews
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {showAllReviews && (
-                <TouchableOpacity
-                  onPress={() => setShowAllReviews(false)}
-                  activeOpacity={0.7}
-                >
-                  <Text className="text-light-200 text-sm text-center mt-2">
-                    Show less
+                    {showAllReviews ? "Show less" : "See all reviews"}
                   </Text>
                 </TouchableOpacity>
               )}
             </View>
           )}
 
+          {/* Budget & Revenue */}
           <View className="flex-row justify-between w-full">
             <MovieInfo
               label="Budget"
               value={
-                movie?.budget
+                movie.budget
                   ? `$${(movie.budget / 1_000_000).toFixed(1)}M`
                   : "N/A"
               }
@@ -572,7 +518,7 @@ const MovieDetails = () => {
             <MovieInfo
               label="Revenue"
               value={
-                movie?.revenue
+                movie.revenue
                   ? `$${Math.round(movie.revenue / 1_000_000)}M`
                   : "N/A"
               }
@@ -582,7 +528,7 @@ const MovieDetails = () => {
             <MovieInfo
               label="Production Companies"
               value={
-                movie?.production_companies?.map((c) => c.name).join(" • ") ||
+                movie.production_companies?.map((c) => c.name).join(" • ") ||
                 "N/A"
               }
             />
@@ -595,10 +541,8 @@ const MovieDetails = () => {
         visible={showTrailerModal}
         animationType="slide"
         presentationStyle="fullScreen"
-        statusBarTranslucent={true}
       >
         <View className="flex-1 bg-black">
-          {/* Close Button */}
           <TouchableOpacity
             className="absolute top-12 left-5 z-50 bg-black/50 rounded-full p-2"
             onPress={closeTrailerModal}
@@ -606,7 +550,6 @@ const MovieDetails = () => {
             <Image source={icons.close} className="w-6 h-6" tintColor="#fff" />
           </TouchableOpacity>
 
-          {/* YouTube Player */}
           {selectedTrailer && (
             <View className="flex-1 justify-center items-center">
               <YouTubePlayer
@@ -622,26 +565,25 @@ const MovieDetails = () => {
       </Modal>
 
       {/* Go Back Button */}
-      <SafeAreaView
-        edges={["bottom"]}
-        className="absolute left-5 right-5 z-10"
+      <TouchableOpacity
+        onPress={router.back}
+        activeOpacity={0.7}
         style={{
-          bottom: 2, // ensures it sits above navigation bar
+          position: "absolute",
+          top: insets.top + 10, // ensures it's below notch/camera
+          left: 10,
+          zIndex: 50,
+          backgroundColor: "rgba(0,0,0,0.3)",
+          borderRadius: 20,
+          padding: 6,
         }}
       >
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={router.back}
-          className="bg-accent rounded-lg py-3.5 flex flex-row items-center justify-center"
-        >
-          <Image
-            source={icons.arrow}
-            className="w-5 h-5 mr-1 rotate-180"
-            tintColor="#fff"
-          />
-          <Text className="text-white font-semibold text-base">Go back</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+        <Image
+          source={icons.left}
+          className="w-8 h-8" // ensures it points left
+          tintColor="#fff"
+        />
+      </TouchableOpacity>
     </View>
   );
 };
