@@ -1,13 +1,16 @@
 import { YouTubePlayer } from "@/components/YouTubePlayer";
 import { icons } from "@/constants/icons";
 import {
+  fetchMovieCast,
   fetchMovieDetails,
+  fetchMovieReviews,
   fetchMovieVideos,
   getBehindTheScenes,
   getPrimaryTrailer,
   getTrailers,
   getVideoStats,
 } from "@/services/api";
+import { addFavorite, isFavorite, removeFavorite } from "@/services/favorites";
 
 import useFetch from "@/services/useFetch";
 import { router, useLocalSearchParams } from "expo-router";
@@ -55,10 +58,38 @@ const MovieDetails = () => {
   const [showAllTrailers, setShowAllTrailers] = useState(false);
   const [showAllBehindScenes, setShowAllBehindScenes] = useState(false);
 
+  const [favorite, setFavorite] = useState(false);
+
+  const [cast, setCast] = useState<any[]>([]);
+  const [castLoading, setCastLoading] = useState(true);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+
+  useEffect(() => {
+    const checkFav = async () => {
+      const fav = await isFavorite(movieId);
+      setFavorite(fav);
+    };
+    checkFav();
+  }, []);
+
   // Fetch movie details
   const { data: movie, loading: movieLoading } = useFetch(() =>
     fetchMovieDetails(movieId)
   );
+  const toggleFavorite = async () => {
+    if (movieLoading || !movie) {
+      return;
+    }
+    if (favorite) {
+      await removeFavorite(movieId);
+      setFavorite(false);
+    } else {
+      await addFavorite(movie!);
+      setFavorite(true);
+    }
+  };
   const insets = useSafeAreaInsets();
   // Fetch videos when component mounts
   useEffect(() => {
@@ -96,6 +127,37 @@ const MovieDetails = () => {
   const primaryTrailer = getPrimaryTrailer(videos);
   const stats = getVideoStats(videos);
 
+  useEffect(() => {
+    const loadCast = async () => {
+      try {
+        const credits = await fetchMovieCast(movieId);
+        setCast(credits || []);
+      } catch (err) {
+        console.error("Error loading cast:", err);
+      } finally {
+        setCastLoading(false);
+      }
+    };
+    loadCast();
+  }, [movieId]);
+
+  useEffect(() => {
+    const loadReviews = async () => {
+      try {
+        setReviewsLoading(true);
+        const data = await fetchMovieReviews(movieId);
+        console.log("reviews-------------,", data);
+
+        setReviews(data);
+      } catch (error) {
+        console.error("Error loading reviews:", error);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+    loadReviews();
+  }, [movieId]);
+
   // Play trailer function
   const playTrailer = (trailer?: any) => {
     const trailerToPlay = trailer || primaryTrailer;
@@ -114,8 +176,34 @@ const MovieDetails = () => {
   if (movieLoading) {
     return (
       <View className="bg-primary flex-1 justify-center items-center">
-        <ActivityIndicator size="large" color="#fff" />
-        <Text className="text-white mt-4">Loading movie details...</Text>
+        <View className="relative">
+          {/* Elegant spinner */}
+          <View className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+
+          {/* Center dot */}
+          <View className="absolute inset-0 justify-center items-center">
+            <View className="w-2 h-2 bg-white rounded-full" />
+          </View>
+        </View>
+
+        <Text className="text-white mt-6 text-lg font-light tracking-widest">
+          LOADING
+        </Text>
+
+        {/* Animated dots */}
+        <View className="flex-row mt-2">
+          {[".", ".", "."].map((dot, index) => (
+            <Text
+              key={index}
+              className="text-white text-lg font-light"
+              style={{
+                opacity: (index + 1) * 0.3,
+              }}
+            >
+              {dot}
+            </Text>
+          ))}
+        </View>
       </View>
     );
   }
@@ -138,7 +226,7 @@ const MovieDetails = () => {
     <View className="bg-primary flex-1">
       <ScrollView
         className="flex-1"
-        contentContainerClassName="pb-20" // Tailwind for padding bottom
+        contentContainerClassName="pb-20"
         showsVerticalScrollIndicator={false}
       >
         {/* Movie Poster with Play Button */}
@@ -150,6 +238,17 @@ const MovieDetails = () => {
             className="w-full h-[550px]"
             resizeMode="cover"
           />
+          <TouchableOpacity
+            onPress={toggleFavorite}
+            className="absolute right-4 -bottom-6 bg-[#AB8BFF] p-3 rounded-full z-20"
+            activeOpacity={0.8}
+          >
+            <Image
+              source={favorite ? icons.heartFilled : icons.heart}
+              className="w-6 h-6"
+              tintColor="#fff"
+            />
+          </TouchableOpacity>
 
           {/* Play Trailer Button Overlay */}
           {primaryTrailer && !videosLoading && (
@@ -354,6 +453,113 @@ const MovieDetails = () => {
             label="Genres"
             value={movie?.genres?.map((g) => g.name).join(" • ") || "N/A"}
           />
+          {/*Casts section */}
+          {!castLoading && cast.length > 0 && (
+            <View className="mt-8 w-full">
+              <Text className="text-white font-bold text-lg mb-4">Cast</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {cast.slice(0, 10).map((actor) => (
+                  <View key={actor.cast_id} className="items-center mr-5 w-24">
+                    <Image
+                      source={{
+                        uri: actor.profile_path
+                          ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                          : "https://via.placeholder.com/100x100?text=No+Image",
+                      }}
+                      className="w-20 h-20 rounded-full border-2 border-accent"
+                    />
+                    <Text
+                      className="text-white  text-center mt-2 text-xs font-semibold"
+                      numberOfLines={1}
+                    >
+                      {actor.original_name}
+                    </Text>
+                    <Text
+                      className="text-light-200 text-center text-xs"
+                      numberOfLines={1}
+                    >
+                      {actor.character}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+          {/* Movie Reviews */}
+          {!reviewsLoading && reviews.length > 0 && (
+            <View className="mt-6 w-full">
+              <Text className="text-white font-bold text-lg mb-3">
+                Reviews ({reviews.length})
+              </Text>
+
+              {(showAllReviews ? reviews : reviews.slice(0, 3)).map(
+                (review) => (
+                  <View
+                    key={review.id}
+                    className="bg-dark-200 rounded-lg p-4 mb-3"
+                  >
+                    <View className="flex-row items-center mb-2">
+                      {review.author_details?.avatar_path ? (
+                        <Image
+                          source={{
+                            uri: review.author_details.avatar_path.startsWith(
+                              "/https"
+                            )
+                              ? review.author_details.avatar_path.slice(1)
+                              : `https://image.tmdb.org/t/p/w200${review.author_details.avatar_path}`,
+                          }}
+                          className="w-10 h-10 rounded-full mr-3"
+                        />
+                      ) : (
+                        <View className="w-10 h-10 rounded-full bg-gray-500 mr-3 justify-center items-center">
+                          <Text className="text-white font-bold text-base">
+                            {review.author[0].toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <View>
+                        <Text className="text-white font-semibold text-sm">
+                          {review.author}
+                        </Text>
+                        <Text className="text-light-200 text-xs">
+                          {new Date(review.created_at).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text className="text-light-100 text-sm leading-5">
+                      {review.content.length > 250
+                        ? review.content.slice(0, 250) + "..."
+                        : review.content}
+                    </Text>
+                  </View>
+                )
+              )}
+
+              {reviews.length > 3 && !showAllReviews && (
+                <TouchableOpacity
+                  onPress={() => setShowAllReviews(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-accent text-sm text-center mt-2 font-semibold">
+                    See all reviews
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {showAllReviews && (
+                <TouchableOpacity
+                  onPress={() => setShowAllReviews(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-light-200 text-sm text-center mt-2">
+                    Show less
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           <View className="flex-row justify-between w-full">
             <MovieInfo
               label="Budget"
