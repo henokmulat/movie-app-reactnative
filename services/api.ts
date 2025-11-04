@@ -1,3 +1,5 @@
+// should now show your key
+
 const TMDB_CONFIG = {
   BASE_URL: "https://api.themoviedb.org/3",
   API_KEY: process.env.EXPO_PUBLIC_MOVIE_API_KEY,
@@ -6,6 +8,7 @@ const TMDB_CONFIG = {
     Authorization: `Bearer ${process.env.EXPO_PUBLIC_MOVIE_API_KEY}`,
   },
 };
+console.log("TMDB API Key:", process.env.EXPO_PUBLIC_MOVIE_API_KEY);
 
 export type Video = {
   id: string;
@@ -214,4 +217,28 @@ export const fetchMovieDetails = async (
     console.log("Error fetching movie details", error);
     throw error;
   }
+};
+
+export const fetchMovieCast = async (movieId: string) => {
+  try {
+    const response = await fetch(
+      `${TMDB_CONFIG.BASE_URL}/movie/${movieId}/credits?api_key=${TMDB_CONFIG.API_KEY}`,
+      { headers: TMDB_CONFIG.headers }
+    );
+    if (!response.ok) throw new Error("Failed to fetch credits");
+    const data = await response.json();
+    console.log(data);
+    return data.cast;
+  } catch (error) {
+    console.error("Error loading cast:", error);
+    return [];
+  }
+};
+
+export const fetchMovieReviews = async (movieId: string) => {
+  const res = await fetch(
+    `https://api.themoviedb.org/3/movie/${movieId}/reviews?api_key=${TMDB_CONFIG.API_KEY}`
+  );
+  const data = await res.json();
+  return data.results || [];
 };
