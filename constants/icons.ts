@@ -3,6 +3,7 @@ import close from "@/assets/icons/close.png";
 import heartFilled from "@/assets/icons/heart-filled.png";
 import heart from "@/assets/icons/heart.png";
 import home from "@/assets/icons/home.png";
+import left from "@/assets/icons/left.png";
 import logo from "@/assets/icons/logo.png";
 import pause from "@/assets/icons/pause.png";
 import person from "@/assets/icons/person.png";
@@ -22,6 +23,7 @@ export const icons = {
   play,
   pause,
   arrow,
+  left,
   heart,
   heartFilled,
   video,
