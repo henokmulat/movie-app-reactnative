@@ -1,3 +1,4 @@
+import Loading from "@/components/Loading";
 import { icons } from "@/constants/icons";
 import { fetchMovieDetails } from "@/services/api";
 import { getUserFavorites } from "@/services/favorites";
@@ -5,7 +6,6 @@ import { getUserFavorites } from "@/services/favorites";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   RefreshControl,
@@ -114,10 +114,7 @@ export default function FavoritesScreen() {
       </Text>
 
       {loading ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#fff" />
-          <Text className="text-gray-400 mt-3">Loading your favorites...</Text>
-        </View>
+        <Loading />
       ) : favorites.length === 0 ? (
         <View className="flex-1 justify-center items-center">
           <Image
