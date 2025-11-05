@@ -21,7 +21,7 @@ export async function addFavorite(movie: MovieDetails) {
     movie_id: movie.id.toString(),
     title: movie.title,
     poster_url: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
-    created_at: new Date().toISOString(),
+    // createdAt: new Date().toISOString(),
   };
 
   return await databases.createDocument(
