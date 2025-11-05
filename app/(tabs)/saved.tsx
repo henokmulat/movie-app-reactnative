@@ -139,6 +139,7 @@ export default function FavoritesScreen() {
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor="#fff"
+              progressBackgroundColor="#AB8BDF"
             />
           }
           showsVerticalScrollIndicator={false}
