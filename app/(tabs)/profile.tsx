@@ -1,3 +1,4 @@
+import Loading from "@/components/Loading";
 import {
   getCurrentUser,
   loginUser,
@@ -6,7 +7,6 @@ import {
 } from "@/services/auth";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -151,12 +151,7 @@ const Profile = () => {
 
   // Loading screen
   if (loading) {
-    return (
-      <View className="flex-1 bg-primary justify-center items-center">
-        <ActivityIndicator size="large" color="#AB8BFF" />
-        <Text className="text-light-200 mt-3">Please wait...</Text>
-      </View>
-    );
+    <Loading />;
   }
 
   //  Logged-in screen
