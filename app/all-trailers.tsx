@@ -90,13 +90,9 @@ export default function AllTrailersScreen() {
 
   return (
     <View className="flex-1 bg-black p-4">
-      <TouchableOpacity onPress={() => router.back()}>
-        <Text className="text-accent mb-4">← Back</Text>
-      </TouchableOpacity>
-
-      <Text className="text-white text-xl font-bold mb-3">
+      {/* <Text className="text-white text-xl font-bold mb-3">
         All Trailers ({trailers.length})
-      </Text>
+      </Text> */}
 
       <FlatList
         data={trailers}
