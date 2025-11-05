@@ -184,13 +184,13 @@ const MovieDetails = () => {
       </View>
     );
   }
-  const CARD_WIDTH = screenWidth * 0.7; // 70% of screen width
+  const CARD_WIDTH = screenWidth * 0.8; // 70% of screen width
   const CARD_HEIGHT = 200;
 
   const renderTrailerItem = ({ item, index }: { item: any; index: number }) => (
     <TouchableOpacity
       key={item.id}
-      className="mr-4 "
+      className="mr-4 bg-zinc-900 p-4 rounded-lg"
       activeOpacity={0.8}
       onPress={() => playTrailer(item)}
       style={{ width: CARD_WIDTH }}
@@ -252,28 +252,6 @@ const MovieDetails = () => {
             />
           </TouchableOpacity>
 
-          {/* Play Trailer Overlay */}
-          {/* {primaryTrailer && !videosLoading && (
-            <TouchableOpacity
-              className="absolute inset-0 justify-center items-center"
-              onPress={() => playTrailer()}
-              activeOpacity={0.8}
-            >
-              <View className="bg-black/50 rounded-full p-4">
-                <View className="bg-accent rounded-full p-5">
-                  <Image
-                    source={icons.play}
-                    className="w-8 h-8 ml-1"
-                    tintColor="#fff"
-                  />
-                </View>
-              </View>
-              <Text className="text-white font-semibold text-lg mt-3 bg-black/50 px-3 py-1 rounded">
-                Play Trailer
-              </Text>
-            </TouchableOpacity>
-          )} */}
-
           {videosLoading && (
             <View className="absolute inset-0 justify-center items-center bg-black/30">
               <ActivityIndicator size="large" color="#fff" />
@@ -317,11 +295,49 @@ const MovieDetails = () => {
               ({movie.vote_count} votes)
             </Text>
           </View>
+          <MovieInfo label="Overview" value={movie.overview} />
+          <MovieInfo
+            label="Genres"
+            value={movie.genres?.map((g) => g.name).join(" • ") || "N/A"}
+          />
+
+          {/* Cast */}
+          {!castLoading && cast.length > 0 && (
+            <View className="mt-8 w-full">
+              <Text className="text-white font-bold text-lg mb-4">Cast</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {cast.slice(0, 10).map((actor) => (
+                  <View key={actor.cast_id} className="items-center mr-5 w-24">
+                    <Image
+                      source={{
+                        uri: actor.profile_path
+                          ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                          : "https://via.placeholder.com/100x100?text=No+Image",
+                      }}
+                      className="w-20 h-20 rounded-full border-2 border-accent"
+                    />
+                    <Text
+                      className="text-white text-center mt-2 text-xs font-semibold"
+                      numberOfLines={1}
+                    >
+                      {actor.original_name}
+                    </Text>
+                    <Text
+                      className="text-light-200 text-center text-xs"
+                      numberOfLines={1}
+                    >
+                      {actor.character}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Trailers Section */}
           {!videosLoading && trailers.length > 0 && (
-            <View className="mt-6 w-full">
-              <View className="flex-row justify-between items-center mb-3">
+            <View className="mt-6 w-full ">
+              <View className="flex-row justify-between items-center mb-3 ">
                 <Text className="text-white font-bold text-lg">
                   Available Trailers ({trailers.length})
                 </Text>
@@ -342,18 +358,6 @@ const MovieDetails = () => {
                 showsHorizontalScrollIndicator={false}
                 renderItem={renderTrailerItem}
               />
-              {trailers.length > 3 && (
-                <TouchableOpacity
-                  onPress={() => setShowAllTrailers((prev) => !prev)}
-                  activeOpacity={0.7}
-                >
-                  <Text className="text-accent text-sm text-center mt-2 font-semibold">
-                    {showAllTrailers
-                      ? "Show less"
-                      : `+${trailers.length - 3} more trailers available`}
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
           )}
 
@@ -405,44 +409,6 @@ const MovieDetails = () => {
           )}
 
           {/* Movie Details */}
-          <MovieInfo label="Overview" value={movie.overview} />
-          <MovieInfo
-            label="Genres"
-            value={movie.genres?.map((g) => g.name).join(" • ") || "N/A"}
-          />
-
-          {/* Cast */}
-          {!castLoading && cast.length > 0 && (
-            <View className="mt-8 w-full">
-              <Text className="text-white font-bold text-lg mb-4">Cast</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {cast.slice(0, 10).map((actor) => (
-                  <View key={actor.cast_id} className="items-center mr-5 w-24">
-                    <Image
-                      source={{
-                        uri: actor.profile_path
-                          ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
-                          : "https://via.placeholder.com/100x100?text=No+Image",
-                      }}
-                      className="w-20 h-20 rounded-full border-2 border-accent"
-                    />
-                    <Text
-                      className="text-white text-center mt-2 text-xs font-semibold"
-                      numberOfLines={1}
-                    >
-                      {actor.original_name}
-                    </Text>
-                    <Text
-                      className="text-light-200 text-center text-xs"
-                      numberOfLines={1}
-                    >
-                      {actor.character}
-                    </Text>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
 
           {/* Reviews */}
           {!reviewsLoading && reviews.length > 0 && (
