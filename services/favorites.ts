@@ -64,7 +64,7 @@ export async function getUserFavorites() {
     FAVORITES_COLLECTION_ID,
     [
       Query.equal("user_id", user.$id), // Only current user's favorites
-      Query.orderDesc("created_at"), // Newest favorites first
+      Query.orderDesc("$createdAt"), // Newest favorites first
     ]
   );
 
