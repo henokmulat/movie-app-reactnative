@@ -43,11 +43,15 @@ export default function Index() {
             className="mt-10 self-center"
           />
         ) : moviesError || trendingError ? (
-          <Text>
+          <Text className="text-red-500">
             Error:{" "}
-            {moviesError?.message ||
-              trendingError?.message ||
-              "Unknown error occurred"}
+            {String(
+              moviesError?.message ||
+                trendingError?.message ||
+                moviesError ||
+                trendingError ||
+                "Unknown error occurred"
+            )}
           </Text>
         ) : (
           <View className="flex-1 mt-5">
