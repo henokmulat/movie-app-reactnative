@@ -136,6 +136,7 @@ const MovieDetails = () => {
   };
 
   if (movieLoading) {
+    // eslint-disable-next-line no-unused-expressions
     <Loading />;
   }
 

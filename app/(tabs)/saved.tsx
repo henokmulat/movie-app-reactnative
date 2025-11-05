@@ -57,11 +57,11 @@ export default function FavoritesScreen() {
     return (
       <TouchableOpacity
         activeOpacity={0.9}
-        className="flex-row h-36 bg-[#1B1B28] mx-6 mt-8 mb-12 rounded-2xl shadow-2xl overflow-visible"
+        className="flex-row h-36 bg-[#1B1B28]  mx-6 mt-8 mb-12 rounded-2xl shadow-2xl overflow-visible"
         onPress={() => router.push(`/movie/${item.movie_id}`)}
       >
         {/* Poster */}
-        <View className="absolute left-6 -top-10 w-32 h-44 shadow-xl rounded-2xl overflow-hidden">
+        <View className="absolute left-6 -top-10 w-32 h-44 shadow-xl rounded-2xl overflow-hidden pr-3">
           <Image
             source={{ uri: item.poster_url }}
             className="w-full h-full"
