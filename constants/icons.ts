@@ -1,5 +1,6 @@
 import arrow from "@/assets/icons/arrow.png";
 import close from "@/assets/icons/close.png";
+import error from "@/assets/icons/error.png";
 import heartFilled from "@/assets/icons/heart-filled.png";
 import heart from "@/assets/icons/heart.png";
 import home from "@/assets/icons/home.png";
@@ -24,6 +25,7 @@ export const icons = {
   pause,
   arrow,
   left,
+  error,
   heart,
   heartFilled,
   video,
