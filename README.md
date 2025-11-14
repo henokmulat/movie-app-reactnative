@@ -1,22 +1,43 @@
-# Movie App (React Native)
+# Movie App – React Native
 
-A simple and modern movie browsing application built with React Native and powered by the TMDb API.
+A modern and visually appealing movie application built with React Native. The app allows users to explore movies, search titles, view detailed information, and manage a personal favorites list. Designed with clean UI, smooth navigation, and scalable architecture.
+
+---
+
+## Overview
+
+This project demonstrates:
+- Clean and reusable component structure  
+- Efficient API integration with TMDb  
+- Smooth animations and navigation  
+- Local state persistence for favorites  
+- Dark and light theme support  
+
+---
 
 ## Features
-- Browse trending, popular, and top-rated movies
-- Search movies
-- View detailed movie information
-- Add movies to favorites (local storage)
-- Dark and light theme support
-- Works on Android and iOS
+
+- Trending, Popular, and Top-Rated movies
+- Movie search functionality
+- Detailed movie information (cast, rating, overview, release date)
+- Add and remove favorites (local storage)
+- Supports both Android and iOS
+- Simple, responsive, and clean UI design
+
+---
 
 ## Tech Stack
-- React Native
-- React Navigation
-- Axios
-- TMDb API
-- AsyncStorage
-- React Native Reanimated
+
+| Category          | Technology            |
+|------------------|------------------------|
+| Framework         | React Native          |
+| Navigation        | React Navigation      |
+| HTTP Client       | Axios                 |
+| API Source        | TMDb API              |
+| Local Storage     | AsyncStorage          |
+| Animations        | Reanimated, Gesture Handler |
+
+---
 
 ## Installation
 
