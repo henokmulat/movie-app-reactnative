@@ -14,6 +14,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
+  FlatList,
   Image,
   Modal,
   ScrollView,
@@ -34,7 +35,7 @@ const MovieInfo = ({ label, value }: MovieInfoProps) => (
   <View className="flex-col items-start justify-center mt-5">
     <Text className="text-light-200 font-normal text-sm">{label}</Text>
     <Text className="text-light-100 font-bold text-sm mt-2">
-      {value ?? "N/A"}
+      {value || "N/A"}
     </Text>
   </View>
 );
@@ -67,33 +68,27 @@ const MovieDetails = () => {
   } = useMovieVideos(movieId);
 
   // Fetch movie details
-  const { data: movie, loading: movieLoading } = useFetch(() =>
-    fetchMovieDetails(movieId)
-  );
+  const {
+    data: movie,
+    loading: movieLoading,
+    error: movieError,
+  } = useFetch(() => fetchMovieDetails(movieId));
 
   // Favorite status
   useEffect(() => {
     (async () => {
-      try {
-        setFavorite(await isFavorite(movieId));
-      } catch (err) {
-        console.error("Failed to get favorite status:", err);
-      }
+      setFavorite(await isFavorite(movieId));
     })();
   }, [movieId]);
 
   const toggleFavorite = useCallback(async () => {
     if (!movie) return;
-    try {
-      if (favorite) {
-        await removeFavorite(movieId);
-        setFavorite(false);
-      } else {
-        await addFavorite(movie);
-        setFavorite(true);
-      }
-    } catch (err) {
-      console.error("Failed to toggle favorite:", err);
+    if (favorite) {
+      await removeFavorite(movieId);
+      setFavorite(false);
+    } else {
+      await addFavorite(movie);
+      setFavorite(true);
     }
   }, [favorite, movie, movieId]);
 
@@ -104,7 +99,7 @@ const MovieDetails = () => {
         const credits = await fetchMovieCast(movieId);
         setCast(credits || []);
       } catch (err) {
-        console.error("Failed to fetch cast:", err);
+        console.error(err);
       } finally {
         setCastLoading(false);
       }
@@ -116,9 +111,9 @@ const MovieDetails = () => {
     (async () => {
       try {
         const data = await fetchMovieReviews(movieId);
-        setReviews(data || []);
+        setReviews(data);
       } catch (err) {
-        console.error("Failed to fetch reviews:", err);
+        console.error(err);
       } finally {
         setReviewsLoading(false);
       }
@@ -142,16 +137,16 @@ const MovieDetails = () => {
     setSelectedTrailer(null);
   };
 
-  // Show loading if movie is still loading
   if (movieLoading) {
     return <Loading />;
   }
 
-  if (!movie) {
+  // 2. Only show error if request failed or no movie returned
+  if (!movie || movieError || (!movie && !movieLoading)) {
     return (
-      <View className="bg-primary flex-1 justify-center items-center px-5">
+      <View className="bg-primary flex-1 justify-center items-center px-4">
         <Text className="text-white text-lg text-center">
-          Movie not found. Check your internet connection!
+          Movie not found. Check your Internet Connection or try again later!
         </Text>
         <TouchableOpacity
           className="bg-accent rounded-lg py-3 px-6 mt-4"
@@ -163,58 +158,47 @@ const MovieDetails = () => {
     );
   }
 
-  const CARD_WIDTH = screenWidth * 0.8; // 80% of screen width
+  const currentMovie: NonNullable<typeof movie> = movie;
+
+  const CARD_WIDTH = screenWidth * 0.8; // 70% of screen width
   const CARD_HEIGHT = 200;
 
-  const renderTrailerItem = ({ item, index }: { item: any; index: number }) => {
-    const imageUri = item?.key
-      ? `https://img.youtube.com/vi/${item.key}/hqdefault.jpg`
-      : undefined;
-
-    return (
-      <TouchableOpacity
-        key={item.id}
-        className="mr-4 bg-zinc-900 p-4 rounded-lg"
-        activeOpacity={0.8}
-        onPress={() => playTrailer(item)}
-        style={{ width: CARD_WIDTH }}
-      >
-        <View className="relative">
-          {imageUri ? (
-            <Image
-              source={{ uri: imageUri }}
-              className="rounded-lg"
-              resizeMode="cover"
-              style={{ width: "100%", height: CARD_HEIGHT }}
-            />
-          ) : (
-            <View
-              style={{ width: "100%", height: CARD_HEIGHT }}
-              className="bg-gray-700 rounded-lg justify-center items-center"
-            >
-              <Text className="text-white">No Image</Text>
-            </View>
-          )}
-          <View className="absolute inset-0 items-center justify-center bg-black/40 rounded-lg">
-            <Image source={icons.play} className="w-10 h-10" tintColor="#fff" />
+  const renderTrailerItem = ({ item, index }: { item: any; index: number }) => (
+    <TouchableOpacity
+      key={item.id}
+      className="mr-4 bg-zinc-900 p-4 rounded-lg"
+      activeOpacity={0.8}
+      onPress={() => playTrailer(item)}
+      style={{ width: CARD_WIDTH }}
+    >
+      <View className="relative">
+        <Image
+          source={{
+            uri: `https://img.youtube.com/vi/${item.key}/hqdefault.jpg`,
+          }}
+          className="rounded-lg"
+          resizeMode="cover"
+          style={{ width: "100%", height: CARD_HEIGHT }}
+        />
+        <View className="absolute inset-0 items-center justify-center bg-black/40 rounded-lg">
+          <Image source={icons.play} className="w-10 h-10" tintColor="#fff" />
+        </View>
+        {index === 0 && (
+          <View className="absolute top-2 left-2 bg-green-500 px-2 py-1 rounded">
+            <Text className="text-white text-xs font-bold">MAIN</Text>
           </View>
-          {index === 0 && (
-            <View className="absolute top-2 left-2 bg-green-500 px-2 py-1 rounded">
-              <Text className="text-white text-xs font-bold">MAIN</Text>
-            </View>
-          )}
-        </View>
-        <View className="mt-2">
-          <Text numberOfLines={1} className="text-white font-medium text-sm">
-            {item?.name ?? "Unknown"}
-          </Text>
-          <Text className="text-light-200 text-xs mt-1">
-            {item?.type ?? "N/A"} • {item?.size ?? "N/A"}p
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+        )}
+      </View>
+      <View className="mt-2">
+        <Text numberOfLines={1} className="text-white font-medium text-sm">
+          {item.name}
+        </Text>
+        <Text className="text-light-200 text-xs mt-1">
+          {item.type} • {item.size}p
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View className="bg-primary flex-1">
@@ -225,20 +209,13 @@ const MovieDetails = () => {
       >
         {/* Movie Poster */}
         <View className="relative">
-          {movie.poster_path ? (
-            <Image
-              source={{
-                uri: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
-              }}
-              className="w-full h-[550px]"
-              resizeMode="cover"
-            />
-          ) : (
-            <View className="w-full h-[550px] bg-gray-700 justify-center items-center">
-              <Text className="text-white">No Poster</Text>
-            </View>
-          )}
-
+          <Image
+            source={{
+              uri: `https://image.tmdb.org/t/p/w500${currentMovie.poster_path}`,
+            }}
+            className="w-full h-[550px]"
+            resizeMode="cover"
+          />
           <TouchableOpacity
             onPress={toggleFavorite}
             className="absolute right-4 -bottom-6 bg-[#AB8BFF] p-3 rounded-full z-20"
@@ -279,29 +256,29 @@ const MovieDetails = () => {
         {/* Movie Info */}
         <View className="flex-col items-start justify-center mt-5 px-5">
           <Text className="text-white font-bold text-2xl">
-            {movie.title ?? "Unknown"}
+            {currentMovie.title}
           </Text>
           <View className="flex-row items-center gap-3 mt-2">
             <Text className="text-light-200 text-base">
-              {movie.release_date?.split("-")[0] ?? "N/A"}
+              {currentMovie.release_date?.split("-")[0]}
             </Text>
             <Text className="text-light-200 text-base">
-              {movie.runtime ?? "N/A"}m
+              {currentMovie.runtime}m
             </Text>
           </View>
           <View className="flex-row items-center bg-dark-100 px-3 py-2 rounded-md gap-2 mt-3">
             <Image source={icons.star} className="w-5 h-5" />
             <Text className="text-white font-bold text-base">
-              {Math.round(movie.vote_average ?? 0)}/10
+              {Math.round(currentMovie.vote_average ?? 0)}/10
             </Text>
             <Text className="text-light-200 text-base">
-              ({movie.vote_count ?? 0} votes)
+              ({currentMovie.vote_count} votes)
             </Text>
           </View>
-          <MovieInfo label="Overview" value={movie.overview} />
+          <MovieInfo label="Overview" value={currentMovie.overview} />
           <MovieInfo
             label="Genres"
-            value={movie.genres?.map((g) => g.name).join(" • ") ?? "N/A"}
+            value={currentMovie.genres?.map((g) => g.name).join(" • ") || "N/A"}
           />
 
           {/* Cast */}
@@ -323,19 +300,95 @@ const MovieDetails = () => {
                       className="text-white text-center mt-2 text-xs font-semibold"
                       numberOfLines={1}
                     >
-                      {actor.original_name ?? "Unknown"}
+                      {actor.original_name}
                     </Text>
                     <Text
                       className="text-light-200 text-center text-xs"
                       numberOfLines={1}
                     >
-                      {actor.character ?? "N/A"}
+                      {actor.character}
                     </Text>
                   </View>
                 ))}
               </ScrollView>
             </View>
           )}
+
+          {/* Trailers Section */}
+          {!videosLoading && trailers.length > 0 && (
+            <View className="mt-6 w-full ">
+              <View className="flex-row justify-between items-center mb-3 ">
+                <Text className="text-white font-bold text-lg">
+                  Available Trailers ({trailers.length})
+                </Text>
+                {trailers.length > 3 && (
+                  <TouchableOpacity
+                    onPress={() => router.push(`/all-trailers?id=${movieId}`)}
+                  >
+                    <Text className="text-accent font-semibold text-sm">
+                      See All
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <FlatList
+                data={showAllTrailers ? trailers : trailers.slice(0, 3)}
+                horizontal
+                keyExtractor={(item) => item.id.toString()}
+                showsHorizontalScrollIndicator={false}
+                renderItem={renderTrailerItem}
+              />
+            </View>
+          )}
+
+          {/* Behind the Scenes */}
+          {!videosLoading && behindTheScenes.length > 0 && (
+            <View className="mt-6 w-full">
+              <Text className="text-white font-bold text-lg mb-3">
+                Behind the Scenes ({behindTheScenes.length})
+              </Text>
+              {(showAllBehindScenes
+                ? behindTheScenes
+                : behindTheScenes.slice(0, 2)
+              ).map((video: any) => (
+                <TouchableOpacity
+                  key={video.id}
+                  className="flex-row items-center bg-dark-200 rounded-lg p-3 mb-2"
+                  onPress={() => playTrailer(video)}
+                >
+                  <View className="bg-blue-500 rounded-full p-2 mr-3">
+                    <Image
+                      source={icons.video}
+                      className="w-4 h-4"
+                      tintColor="#fff"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-white font-medium text-sm">
+                      {video.name}
+                    </Text>
+                    <Text className="text-light-200 text-xs mt-1">
+                      {video.type}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              {behindTheScenes.length > 2 && (
+                <TouchableOpacity
+                  onPress={() => setShowAllBehindScenes((prev) => !prev)}
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-accent text-sm text-center mt-2 font-semibold">
+                    {showAllBehindScenes
+                      ? "Show less"
+                      : `+${behindTheScenes.length - 2} more behind the scenes`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Movie Details */}
 
           {/* Reviews */}
           {!reviewsLoading && reviews.length > 0 && (
@@ -344,52 +397,46 @@ const MovieDetails = () => {
                 Reviews ({reviews.length})
               </Text>
               {(showAllReviews ? reviews : reviews.slice(0, 3)).map(
-                (review) => {
-                  const avatarUri = review.author_details?.avatar_path
-                    ? review.author_details.avatar_path.startsWith("/https")
-                      ? review.author_details.avatar_path.slice(1)
-                      : `https://image.tmdb.org/t/p/w200${review.author_details.avatar_path}`
-                    : undefined;
-
-                  return (
-                    <View
-                      key={review.id}
-                      className="bg-dark-200 rounded-lg p-4 mb-3"
-                    >
-                      <View className="flex-row items-center mb-2">
-                        {avatarUri ? (
-                          <Image
-                            source={{ uri: avatarUri }}
-                            className="w-10 h-10 rounded-full mr-3"
-                          />
-                        ) : (
-                          <View className="w-10 h-10 rounded-full bg-gray-500 mr-3 justify-center items-center">
-                            <Text className="text-white font-bold text-base">
-                              {review.author?.[0]?.toUpperCase() ?? "?"}
-                            </Text>
-                          </View>
-                        )}
-                        <View>
-                          <Text className="text-white font-semibold text-sm">
-                            {review.author ?? "Unknown"}
-                          </Text>
-                          <Text className="text-light-200 text-xs">
-                            {review.created_at
-                              ? new Date(review.created_at).toLocaleDateString()
-                              : "N/A"}
+                (review) => (
+                  <View
+                    key={review.id}
+                    className="bg-dark-200 rounded-lg p-4 mb-3"
+                  >
+                    <View className="flex-row items-center mb-2">
+                      {review.author_details?.avatar_path ? (
+                        <Image
+                          source={{
+                            uri: review.author_details.avatar_path.startsWith(
+                              "/https"
+                            )
+                              ? review.author_details.avatar_path.slice(1)
+                              : `https://image.tmdb.org/t/p/w200${review.author_details.avatar_path}`,
+                          }}
+                          className="w-10 h-10 rounded-full mr-3"
+                        />
+                      ) : (
+                        <View className="w-10 h-10 rounded-full bg-gray-500 mr-3 justify-center items-center">
+                          <Text className="text-white font-bold text-base">
+                            {review.author[0].toUpperCase()}
                           </Text>
                         </View>
+                      )}
+                      <View>
+                        <Text className="text-white font-semibold text-sm">
+                          {review.author}
+                        </Text>
+                        <Text className="text-light-200 text-xs">
+                          {new Date(review.created_at).toLocaleDateString()}
+                        </Text>
                       </View>
-                      <Text className="text-light-100 text-sm leading-5">
-                        {review.content
-                          ? review.content.length > 250
-                            ? review.content.slice(0, 250) + "..."
-                            : review.content
-                          : "No review"}
-                      </Text>
                     </View>
-                  );
-                }
+                    <Text className="text-light-100 text-sm leading-5">
+                      {review.content.length > 250
+                        ? review.content.slice(0, 250) + "..."
+                        : review.content}
+                    </Text>
+                  </View>
+                )
               )}
               {reviews.length > 3 && (
                 <TouchableOpacity
@@ -397,7 +444,7 @@ const MovieDetails = () => {
                   activeOpacity={0.7}
                 >
                   <Text className="text-accent text-sm text-center mt-2 font-semibold">
-                    {showAllReviews ? "Show less" : `See all reviews`}
+                    {showAllReviews ? "Show less" : "See all reviews"}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -405,32 +452,34 @@ const MovieDetails = () => {
           )}
 
           {/* Budget & Revenue */}
-          <View className="flex-row justify-between w-full mt-6">
+          <View className="flex-row justify-between w-full">
             <MovieInfo
               label="Budget"
               value={
-                movie.budget
-                  ? `$${(movie.budget / 1_000_000).toFixed(1)}M`
+                currentMovie.budget
+                  ? `$${(currentMovie.budget / 1_000_000).toFixed(1)}M`
                   : "N/A"
               }
             />
             <MovieInfo
               label="Revenue"
               value={
-                movie.revenue
-                  ? `$${Math.round(movie.revenue / 1_000_000)}M`
+                currentMovie.revenue
+                  ? `$${Math.round(currentMovie.revenue / 1_000_000)}M`
                   : "N/A"
               }
             />
           </View>
-
-          <MovieInfo
-            label="Production Companies"
-            value={
-              movie.production_companies?.map((c) => c.name).join(" • ") ??
-              "N/A"
-            }
-          />
+          <View className="mb-10">
+            <MovieInfo
+              label="Production Companies"
+              value={
+                currentMovie.production_companies
+                  ?.map((c) => c.name)
+                  .join(" • ") || "N/A"
+              }
+            />
+          </View>
         </View>
       </ScrollView>
 
@@ -455,7 +504,7 @@ const MovieDetails = () => {
                 height={screenWidth * 0.75}
               />
               <Text className="text-white text-center text-lg font-semibold mt-4 px-4">
-                {selectedTrailer.name ?? "Trailer"}
+                {selectedTrailer.name}
               </Text>
             </View>
           )}
@@ -464,11 +513,11 @@ const MovieDetails = () => {
 
       {/* Go Back Button */}
       <TouchableOpacity
-        onPress={() => router.back()}
+        onPress={router.back}
         activeOpacity={0.7}
         style={{
           position: "absolute",
-          top: insets.top + 10,
+          top: insets.top + 10, // ensures it's below notch/camera
           left: 10,
           zIndex: 50,
           backgroundColor: "rgba(0,0,0,0.3)",
@@ -476,7 +525,11 @@ const MovieDetails = () => {
           padding: 6,
         }}
       >
-        <Image source={icons.left} className="w-8 h-8" tintColor="#fff" />
+        <Image
+          source={icons.left}
+          className="w-8 h-8" // ensures it points left
+          tintColor="#fff"
+        />
       </TouchableOpacity>
     </View>
   );
