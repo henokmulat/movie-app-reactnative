@@ -19,6 +19,7 @@ export default function RootLayout() {
             headerTintColor: "#fff",
           }}
         />
+        <Stack.Screen name="trailer" options={{ headerShown: false }} />
       </Stack>
     </>
   );
