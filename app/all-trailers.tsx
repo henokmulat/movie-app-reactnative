@@ -47,7 +47,7 @@ export default function AllTrailersScreen() {
 
   const playTrailer = (trailer: Trailer) => {
     // Navigate back to MovieDetails and play selected trailer
-    router.back();
+    router.push(`./trailer/${trailer.key}`);
     // You can also pass the trailer via state or context if needed
   };
 
